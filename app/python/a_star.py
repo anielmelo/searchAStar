@@ -1,82 +1,113 @@
 import heapq
+from node import Node
 
-"""
-classe para representar os nós
-Node {
-    valor do nó,
-    custo real até o nó,
-    cálculo da heurística,
-    nó pai
-}
-"""
-class Node:
-    def __init__(self, value, g_cost, h_cost, parent):
-        self.value = value
-        self.g_cost = g_cost 
-        self.h_cost = h_cost 
-        self.parent = parent 
+class AStar:
+    """
+    Implementação do algoritmo A* (A-Star) para encontrar o menor caminho entre dois números
+    inteiros utilizando operações específicas (+1 e *2).
 
-    def f_cost(self):
-        return self.g_cost + self.h_cost
+    O objetivo é transformar um número inicial (start_value) em um número alvo (goal_value).
 
-    """define a prioridade na fila (menor custo f(n))"""
-    def __lt__(self, other):
-        return self.f_cost() < other.f_cost()
+    A busca utiliza uma fila de prioridade (heapq) para explorar os nós com o menor custo estimado
+    até o objetivo.
 
-"""
-heurística simples (diferença absoluta entre os valores)
-"""
-def heuristic(current, goal):
-    return abs(goal - current)
+    Atributos
+    ---------
+        start_value: int
+            valor inicial da busca.
+        goal_value: int
+            valor objetivo da busca.
+        open_set: list
+            fila de prioridade contendo os nós a serem explorados.
+        visited: set()
+            conjunto de valores já visitados.
+        nodes_visited: int
+            contador de nós visitados durante a execução.
+    """
 
-"""
-algoritmo de busca
+    def __init__(self, start_value, goal_value):
+        self.start_value = start_value
+        self.goal_value = goal_value
+        self.open_set = []
+        self.visited = set()
+        self.nodes_visited = 0
 
-descrição: Encontrar o menor caminho entre start_value e goal_value usando apenas as operações permitidas: +1 e *2.
-"""
-def a_star(start_value, goal_value):
-    open_set = []
-    heapq.heappush(open_set, Node(start_value, 0, heuristic(start_value, goal_value), None))
-    visited = set()
-    nodes_visited = 0
+    def heuristic(self, current):
+        """
+        calcula a heurística baseada na diferença absoluta entre o valor atual e final.
 
-    while open_set:
-        current = heapq.heappop(open_set)
-        nodes_visited += 1
+        Parâmetros
+        ----------
+            current: int
+                valor do nó atual.
 
-        """condição de parada (reconstruir o caminho)"""
-        if current.value == goal_value:
-            path = []
-            node = current
-            while node:
-                path.append(node.value)
-                node = node.parent
-            path.reverse()
+        Retorno
+        -------
+            h_cost: int
+                valor da diferença entre valor atual e final.
+        """
 
-            print("Caminho percorrido:", path)
-            print("Quantidade de nós visitados:", nodes_visited)
-            print("Custo total:", current.g_cost)
-            return
+        return abs(self.goal_value - current)
 
-        visited.add(current.value)
+    def find_path(self):
+        """
+        executa o algoritmo A* e retorna o caminho até o objetivo (se houver).
 
-        """gera os próximos estados (+1 e *2)"""
-        for next_value in [current.value + 1, current.value * 2]:
-            if next_value not in visited and next_value <= goal_value * 2:  
-                next_node = Node(
-                    next_value,
-                    current.g_cost + 1,
-                    heuristic(next_value, goal_value),
-                    current
-                )
-                heapq.heappush(open_set, next_node)
+        Retorno
+        -------
+            reconstruct_path: dict
+                chama o dict retornado pelo metódo de reconstrução de caminho até o valor final.
+        """
 
-    print("Não foi possível encontrar um caminho.")
+        start_node = Node(
+            self.start_value,
+            g_cost=0,
+            h_cost=self.heuristic(self.start_value)
+        )
+        heapq.heappush(self.open_set, start_node)
 
-"""
-função main
-"""
-if __name__ == "__main__":
-    start = int(input("Digite o número inicial: "))
-    goal = int(input("Digite o número objetivo: "))
-    a_star(start, goal)
+        while self.open_set:
+            current = heapq.heappop(self.open_set)
+            self.nodes_visited += 1
+
+            if current.value == self.goal_value:
+                return self.reconstruct_path(current)
+
+            self.visited.add(current.value)
+
+            for next_value in [current.value + 1, current.value * 2]:
+                if next_value not in self.visited and next_value <= self.goal_value * 2:
+                    next_node = Node(
+                        next_value,
+                        g_cost=current.g_cost + 1,
+                        h_cost=self.heuristic(next_value),
+                        parent=current
+                    )
+                    heapq.heappush(self.open_set, next_node)
+
+        return None
+
+    def reconstruct_path(self, node):
+        """
+        reconstrói o caminho do nó inicial até o nó final.
+
+        Parâmetros
+        ----------
+            node: Node
+                nó atual
+
+        Retorno
+        -------
+            dicionário contendo o caminho do nó inicial até o nó final, o número de nós visitados e o custo total para chegar até o nó final.
+        """
+        
+        path = []
+        while node:
+            path.append(node.value)
+            node = node.parent
+        path.reverse()
+        return {
+            "path": path,
+            "nodes_visited": self.nodes_visited,
+            "total_cost": len(path) - 1
+        }
